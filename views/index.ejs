@@ -1,0 +1,35 @@
+
+  <%- include('../head.ejs') %>
+  <body>
+    <div class="box" id="heading">
+      <h1><%= title %>.</h1>
+    </div>
+    <div class="box">
+      <% todoItemsEJS.forEach(element => { %>
+      <div class="item">
+        <input type="checkbox" />
+        <p><%= element %></p>
+      </div>
+
+      <% }) %>
+      <form class="item" action="/ " method="POST">
+        <input
+          type="text"
+          name="todoItem"
+          id=""
+          placeholder="new item..."
+          autocomplete="off"
+        />
+        <button type="submit" name="todoButton" value="<%= buttonTypeEJS%>">
+          +
+        </button>
+        <button type="submit" name="todoButtonRemove" value="<%= buttonTypeEJS%>">
+          
+        </button>
+      </form>
+    </div>
+
+    
+    <%- include('../footer.ejs') %>
+  </body>
+</html>
