@@ -41,7 +41,15 @@ input:checked + p {
   text-decoration: line-through;
   text-decoration-color: #a683e3;
 }
+.remove {
+  background-color: blue;
 
+  display: none;
+}
+#hiddenCheckBox:checked ~ .remove {
+  /* A toggled state! No JavaScript! */
+  background-color: red;
+}
 input[type="checkbox"] {
   margin: 20px;
 }

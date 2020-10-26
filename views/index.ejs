@@ -4,15 +4,23 @@
     <div class="box" id="heading">
       <h1><%= title %>.</h1>
     </div>
+    <form action="/" method= "post">
     <div class="box">
       <% todoItemsEJS.forEach(element => { %>
       <div class="item">
-        <input type="checkbox" />
-        <p><%= element %></p>
+        <input class = "removeCheckBox" type="checkbox" name="delCheckBox" value="<%=element._id%>" />
+       
+        <p><%= element.name %></p>
+        
       </div>
-
+      
       <% }) %>
-      <form class="item" action="/ " method="POST">
+      
+    
+      <div class="item" action="/ " method="POST">
+        <button class="remove" type="submit" name="todoButtonRemove" value="<%= buttonTypeEJS%>">-
+          
+        </button>
         <input
           type="text"
           name="todoItem"
@@ -23,13 +31,12 @@
         <button type="submit" name="todoButton" value="<%= buttonTypeEJS%>">
           +
         </button>
-        <button type="submit" name="todoButtonRemove" value="<%= buttonTypeEJS%>">
-          
-        </button>
-      </form>
+        
+      </div>
     </div>
 
-    
+    </form>
     <%- include('../footer.ejs') %>
   </body>
+  <script src="jss/index.js"></script>
 </html>

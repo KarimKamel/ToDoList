@@ -11,106 +11,110 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
 const mongoose = require("mongoose");
+const e = require("express");
 
-mongoose.connect("mongodb://localhost/todoDB", {
+mongoose.connect("mongodb://localhost/todoListDB", {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
 const db = mongoose.connection;
-db.on("error", console.error.bind(console, "DB connection error:"));
-db.once("open", function () {
-  console.log("connected to DB");
-});
+
 const ItemSchema = new mongoose.Schema({
   name: String,
 });
-const Item = mongoose.model("Item", ItemSchema, "items");
+var Item = mongoose.model("homeItem", ItemSchema, "items");
+var currentRoute = "";
 const items = [
   { name: "get food" },
   { name: "cook food" },
   { name: "eat food" },
 ];
-async function getItems(res) {
-  var itemObj = await Item.find();
-  var itemNames = [];
-  itemObj.forEach(item => {
-    itemNames.push({ id: item._id, name: item.name });
-  });
 
-  res.render("index2", {
-    // title: "today is " + dateUtil.getDay() + ".This is your Home to-do list",
-    title: "to do list",
-    todoItemsEJS: itemNames,
-    buttonTypeEJS: "homeToDo",
-  });
-}
-
-async function insertItems(req, res) {
-  var todoItem = req.body.todoItem;
-  if (req.body.todoButton == "workToDo") {
-    var item = new Item({ name: todoItem });
-    await item.save(function (err, succ) {
-      if (err) console.log(err);
-      else console.log("inserting item " + succ);
-    });
-    res.redirect("/work");
-  } else if (req.body.todoButton == "homeToDo") {
-    var item = new Item({ name: todoItem });
-    await item.save(function (err, succ) {
-      if (err) console.log(err);
-      else console.log("inserting item " + succ);
-    });
-    res.redirect("/");
-  }
-}
-
-async function removeItems(req, res) {
-  var todoItem = [];
-
-  if (req.body.todoButton == "homeToDoRemove") {
-    req.body.checkbox.forEach(id => {
-      todoItem.push(id);
-    });
-
-    await Item.deleteMany({ _id: todoItem }, function (err, succ) {
-      if (err) console.log(err);
-      else console.log("inserting item " + succ);
-    });
-    res.redirect("/");
-  }
-}
-// Item.insertMany(items, function (error, docs) {
-//   if (error) {
-//     console.log(error);
-//   } else {
-//     console.log(docs);
-//   }
-// });
-// var itemObj = Item.find();
-// var itemNames = [];
-// itemObj.forEach(item => {
-//   itemNames.push(item.name);
-// });
-
-// var homeTodoItems = ["get food", "cook food", "eat food"];
-var homeTodoItems = {};
-var workTodoItems = [];
 var dateOptions = { weekday: "long" };
 var today = new Date();
 var dayOfWeek = today.toLocaleDateString("en-US", dateOptions);
 
-app.get("/", (req, res) => {
-  getItems(res);
-  // var d = new Date();
-  // var n = d.getDay()
+app.get("/:customRoute", (req, res) => {
+  var collectionName = req.params.customRoute;
 
-  // res.render("index", {
-  //   // title: "today is " + dateUtil.getDay() + ".This is your Home to-do list",
-  //   title:"to do list",
-  //   todoItemsEJS: homeTodoItems,
-  //   buttonTypeEJS: "homeToDo",
-  // });
+  Item = mongoose.model(
+    collectionName + "Item",
+    ItemSchema,
+    collectionName + "items"
+  );
+  res.redirect("/");
 });
+//   var itemList = Item.find((err, docsFound) => {
+//     if (err) console.log(err);
+//     else {
+//       res.render("index", {
+//         title:
+//           "today is " +
+//           dateUtil.getDay() +
+//           ".This is your " +
+//           collectionName +
+//           " to-do list",
+//         // title:"to do list",
+//         todoItemsEJS: docsFound,
+//         buttonTypeEJS: "homeToDo",
+//       });
+//     }
+//   });
+// });
+app.get("/", function (req, res) {
+  // getItems(res);
+  var d = new Date();
+  var n = d.getDay();
+  var itemList = Item.find((err, docsFound) => {
+    if (err) console.log(err);
+    else {
+      if (docsFound.length == 0) {
+        Item.insertMany(items, (err, docsInserted) => {
+          if (err) console.log(err);
+          else {
+            docsFound = docsInserted;
+            res.render("index", {
+              title:
+                "today is " +
+                dateUtil.getDay() +
+                ".This is your " +
+                Item.modelName +
+                " to-do list",
+              // title:"to do list",
+              todoItemsEJS: docsFound,
+              buttonTypeEJS: "homeToDo",
+            });
+          }
+        });
+      } else {
+        res.render("index", {
+          title:
+            "today is " +
+            dateUtil.getDay() +
+            ".This is your " +
+            Item.modelName +
+            " to-do list",
+          // title:"to do list",
+          todoItemsEJS: docsFound,
+          buttonTypeEJS: "homeToDo",
+        });
+      }
+    }
+  });
+});
+
+// var items = Item.find().then(function (doc) {
+//   var itemList = doc.map(item => {
+//     return item.name;
+//   });
+
+// res.render("index", {
+//   title: "today is " + dateUtil.getDay() + ".This is your Home to-do list",
+//   // title:"to do list",
+//   todoItemsEJS: itemList,
+//   buttonTypeEJS: "homeToDo",
+// });
+
 app.get("/work", (req, res) => {
   res.render("index", {
     title: "today is " + dateUtil.getDay() + ".This is your work to-do list ",
@@ -124,9 +128,11 @@ app.get("/about", (req, res) => {
   // res.sendFile(path.join(__dirname, "public/about"));
 });
 
-app.post("/", (req, res) => {
-  if (req.body.todoButton == "homeToDo") insertItems(req, res);
-  else if (req.body.todoButton == "homeToDoRemove") removeItems(req, res);
+app.post("/:customRoute", (req, res) => {
+  var collectionName = req.params.customRoute;
+  if (req.body.todoButton == "homeToDo")
+    insertItemsCustom(req, res, collectionName);
+  else if (req.body.todoButtonRemove == "homeToDo") removeItems(req, res);
   // console.log(req.body.todoItem);
   // var todoItem = req.body.todoItem;
   // if (req.body.todoButton == "workToDo") {
@@ -137,6 +143,57 @@ app.post("/", (req, res) => {
   //   res.redirect("/");
   // }
 });
+app.post("/", (req, res) => {
+  if (req.body.todoButton == "homeToDo") insertItems(req, res);
+  else if (req.body.todoButtonRemove == "homeToDo") removeItems(req, res);
+  // console.log(req.body.todoItem);
+  // var todoItem = req.body.todoItem;
+  // if (req.body.todoButton == "workToDo") {
+
+  //   res.redirect("/work");
+  // } else if (req.body.todoButton == "homeToDo") {
+
+  //   res.redirect("/");
+  // }
+});
+function removeItems(req, res) {
+  console.log(req);
+  var itemIds = req.body.delCheckBox;
+  Item.deleteMany({ _id: itemIds }, err => {
+    if (err) console.log(err);
+    else res.redirect("/");
+  });
+}
+function insertItems(req, res) {
+  var item = req.body.todoItem;
+  var collectionItem = new Item({ name: item });
+  collectionItem.save((err, doc) => {
+    if (err) console.log(err);
+    else {
+      res.redirect("/");
+    }
+  });
+}
+function insertItems(req, res) {
+  var item = req.body.todoItem;
+  var collectionItem = new Item({ name: item });
+  collectionItem.save((err, doc) => {
+    if (err) console.log(err);
+    else {
+      res.redirect("/");
+    }
+  });
+}
+function insertItemsCustom(req, res, collectionName) {
+  var item = req.body.todoItem;
+  var collectionItem = new Item({ name: item });
+  collectionItem.save((err, doc) => {
+    if (err) console.log(err);
+    else {
+      res.redirect("/" + collectionName);
+    }
+  });
+}
 app.post("/work", (req, res) => {
   console.log(req.body.workItem);
   var workItem = req.body.todoItem;
