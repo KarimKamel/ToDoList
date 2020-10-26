@@ -22,27 +22,53 @@ const db = mongoose.connection;
 const ItemSchema = new mongoose.Schema({
   name: String,
 });
-var Item = mongoose.model("homeItem", ItemSchema, "items");
+const Item = mongoose.model("Item", ItemSchema, "items");
+
+const CollectionSchema = new mongoose.Schema({
+  collectionName: String,
+  collectionItems: [ItemSchema],
+});
+const Collection = mongoose.model("Collection", CollectionSchema);
+
 var currentRoute = "";
-const items = [
-  { name: "get food" },
-  { name: "cook food" },
-  { name: "eat food" },
-];
+var item1 = new Item({ name: "get food" });
+var item2 = new Item({ name: "cook food" });
+var item3 = new Item({ name: "eat food" });
+const defaultItems = [item1, item2, item3];
 
 var dateOptions = { weekday: "long" };
 var today = new Date();
 var dayOfWeek = today.toLocaleDateString("en-US", dateOptions);
 
 app.get("/:customRoute", (req, res) => {
-  var collectionName = req.params.customRoute;
-
-  Item = mongoose.model(
-    collectionName + "Item",
-    ItemSchema,
-    collectionName + "items"
-  );
-  res.redirect("/");
+  var customRoute = req.params.customRoute;
+  var collection = new Collection({
+    collectionName: customRoute,
+    collectionItems: defaultItems,
+  });
+  console.log(collection);
+  Collection.findOne({ collectionName: customRoute }, (err, docsFound) => {
+    if (err) console.log(err);
+    else if (docsFound) {
+      console.log("list found");
+      res.render("list", {
+        listTitle:
+          "today is " +
+          dateUtil.getDay() +
+          ".This is your " +
+          docsFound.collectionName +
+          " to-do list",
+        // title:"to do list",
+        newListItems: docsFound.collectionItems,
+        collectionName: docsFound.collectionName,
+      });
+    } else {
+      collection.save((err, doc) => {
+        console.log("saving ", doc);
+        res.redirect("/" + doc.collectionName);
+      });
+    }
+  });
 });
 //   var itemList = Item.find((err, docsFound) => {
 //     if (err) console.log(err);
@@ -69,7 +95,7 @@ app.get("/", function (req, res) {
     if (err) console.log(err);
     else {
       if (docsFound.length == 0) {
-        Item.insertMany(items, (err, docsInserted) => {
+        Item.insertMany(defaultItems, (err, docsInserted) => {
           if (err) console.log(err);
           else {
             docsFound = docsInserted;
@@ -130,9 +156,11 @@ app.get("/about", (req, res) => {
 
 app.post("/:customRoute", (req, res) => {
   var collectionName = req.params.customRoute;
-  if (req.body.todoButton == "homeToDo")
-    insertItemsCustom(req, res, collectionName);
-  else if (req.body.todoButtonRemove == "homeToDo") removeItems(req, res);
+  var receivedItem = req.body.newItem;
+  // var collection;
+  // if (req.body.todoButton == "homeToDo")
+  insertItemsCustom(req, res, collectionName);
+  // else if (req.body.todoButtonRemove == "homeToDo") removeItems(req, res);
   // console.log(req.body.todoItem);
   // var todoItem = req.body.todoItem;
   // if (req.body.todoButton == "workToDo") {
@@ -184,15 +212,23 @@ function insertItems(req, res) {
     }
   });
 }
-function insertItemsCustom(req, res, collectionName) {
-  var item = req.body.todoItem;
+function insertItemsCustom(req, res, listName) {
+  var item = req.body.newItem;
   var collectionItem = new Item({ name: item });
-  collectionItem.save((err, doc) => {
-    if (err) console.log(err);
-    else {
-      res.redirect("/" + collectionName);
+  Collection.findOneAndUpdate(
+    { collectionName: listName },
+    { $push: { collectionItems: collectionItem } },
+    (err, docs) => {
+      if (!err) console.log(docs);
+      res.redirect("/" + listName);
     }
-  });
+  );
+  // collectionItem.save((err, doc) => {
+  //   if (err) console.log(err);
+  //   else {
+  //     res.redirect("/" + listName);
+  //   }
+  // });
 }
 app.post("/work", (req, res) => {
   console.log(req.body.workItem);
